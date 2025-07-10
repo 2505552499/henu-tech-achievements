@@ -83,9 +83,30 @@ let currentAchievementCount = 2;
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', function() {
-    generateQRCodes();
-    setupEventListeners();
-    addLoadingAnimation();
+    // 延迟一点时间确保所有资源加载完成
+    setTimeout(() => {
+        generateQRCodes();
+        setupEventListeners();
+        addLoadingAnimation();
+    }, 500);
+});
+
+// 备用加载方式
+window.addEventListener('load', function() {
+    // 如果DOMContentLoaded后500ms还没生成，再次尝试
+    setTimeout(() => {
+        const qrElements = document.querySelectorAll('.qr-code');
+        let hasEmptyQR = false;
+        qrElements.forEach(el => {
+            if (el.children.length === 0) {
+                hasEmptyQR = true;
+            }
+        });
+        if (hasEmptyQR) {
+            console.log('重新尝试生成二维码...');
+            generateQRCodes();
+        }
+    }, 1000);
 });
 
 // 生成二维码
@@ -95,23 +116,53 @@ function generateQRCodes() {
         const qrElement = document.getElementById(`qr-${achievement.id}`);
         if (qrElement && qrElement.children.length === 0) {
             // 生成指向详情页面的URL
-            const detailUrl = `${window.location.origin}/achievement-${achievement.id}.html`;
+            const detailUrl = `${window.location.origin}${window.location.pathname.replace('index.html', '')}achievement-${achievement.id}.html`;
             
-            // 创建二维码
-            QRCode.toCanvas(qrElement, detailUrl, {
-                width: 64,
-                height: 64,
-                margin: 1,
-                color: {
-                    dark: '#333333',
-                    light: '#FFFFFF'
+            try {
+                // 检查QRCode是否可用
+                if (typeof QRCode !== 'undefined') {
+                    // 方法1：尝试使用canvas
+                    QRCode.toCanvas(qrElement, detailUrl, {
+                        width: 64,
+                        height: 64,
+                        margin: 1,
+                        color: {
+                            dark: '#333333',
+                            light: '#FFFFFF'
+                        }
+                    }, function (error) {
+                        if (error) {
+                            console.error('Canvas方式失败，尝试字符串方式:', error);
+                            // 方法2：使用字符串方式生成
+                            QRCode.toString(detailUrl, {
+                                type: 'svg',
+                                width: 64,
+                                color: {
+                                    dark: '#333333',
+                                    light: '#FFFFFF'
+                                }
+                            }, function (err, string) {
+                                if (err) {
+                                    console.error('SVG方式也失败:', err);
+                                    qrElement.innerHTML = '<div style="color: #666; font-size: 10px; text-align: center; padding: 20px;">二维码<br/>加载中</div>';
+                                } else {
+                                    qrElement.innerHTML = string;
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    // QRCode库未加载，显示占位符
+                    console.warn('QRCode库未加载');
+                    qrElement.innerHTML = '<div style="color: #666; font-size: 10px; text-align: center; padding: 20px; border: 1px solid #ddd;">二维码<br/>正在加载</div>';
+                    
+                    // 延迟重试
+                    setTimeout(() => generateQRCodes(), 1000);
                 }
-            }, function (error) {
-                if (error) {
-                    console.error('二维码生成失败:', error);
-                    qrElement.innerHTML = '<div style="color: red; font-size: 12px;">二维码生成失败</div>';
-                }
-            });
+            } catch (error) {
+                console.error('二维码生成异常:', error);
+                qrElement.innerHTML = '<div style="color: #666; font-size: 10px; text-align: center; padding: 20px;">📱<br/>扫码查看</div>';
+            }
         }
     });
 }
