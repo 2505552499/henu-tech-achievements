@@ -135,19 +135,35 @@ main {
     gap: 1rem;
     margin-bottom: 1rem;
     flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: flex-start;
 }
 
 .result-img {
-    width: 150px;
-    height: 120px;
-    object-fit: cover;
+    max-width: 100%;
+    height: auto;
+    min-height: 120px;
+    max-height: 200px;
+    object-fit: contain;
     border-radius: 8px;
     border: 2px solid #e9ecef;
     transition: transform 0.3s ease;
+    background: #f8f9fa;
 }
 
 .result-img:hover {
     transform: scale(1.05);
+}
+
+/* 特殊处理横向图片 */
+.result-img[src*="perovskite-materials"] {
+    max-width: 300px;
+    width: auto;
+}
+
+/* 响应式图片容器 */
+.results-images .result-img {
+    flex: 0 0 auto;
 }
 
 /* 工艺流程图 */
@@ -285,8 +301,10 @@ footer {
     }
     
     .result-img {
-        width: 120px;
-        height: 100px;
+        max-width: 100%;
+        height: auto;
+        min-height: 100px;
+        max-height: 150px;
     }
     
     .contact-row {
