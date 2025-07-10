@@ -109,7 +109,7 @@ window.addEventListener('load', function() {
     }, 1000);
 });
 
-// 生成二维码
+// 生成二维码 - 使用在线API服务
 function generateQRCodes() {
     // 为已存在的成果生成二维码
     [...achievementsData, ...additionalAchievements].forEach((achievement) => {
@@ -118,51 +118,62 @@ function generateQRCodes() {
             // 生成指向详情页面的URL
             const detailUrl = `${window.location.origin}${window.location.pathname.replace('index.html', '')}achievement-${achievement.id}.html`;
             
-            try {
-                // 检查QRCode是否可用
-                if (typeof QRCode !== 'undefined') {
-                    // 方法1：尝试使用canvas
-                    QRCode.toCanvas(qrElement, detailUrl, {
-                        width: 64,
-                        height: 64,
-                        margin: 1,
-                        color: {
-                            dark: '#333333',
-                            light: '#FFFFFF'
-                        }
-                    }, function (error) {
-                        if (error) {
-                            console.error('Canvas方式失败，尝试字符串方式:', error);
-                            // 方法2：使用字符串方式生成
-                            QRCode.toString(detailUrl, {
-                                type: 'svg',
-                                width: 64,
-                                color: {
-                                    dark: '#333333',
-                                    light: '#FFFFFF'
-                                }
-                            }, function (err, string) {
-                                if (err) {
-                                    console.error('SVG方式也失败:', err);
-                                    qrElement.innerHTML = '<div style="color: #666; font-size: 10px; text-align: center; padding: 20px;">二维码<br/>加载中</div>';
-                                } else {
-                                    qrElement.innerHTML = string;
-                                }
-                            });
-                        }
-                    });
-                } else {
-                    // QRCode库未加载，显示占位符
-                    console.warn('QRCode库未加载');
-                    qrElement.innerHTML = '<div style="color: #666; font-size: 10px; text-align: center; padding: 20px; border: 1px solid #ddd;">二维码<br/>正在加载</div>';
-                    
-                    // 延迟重试
-                    setTimeout(() => generateQRCodes(), 1000);
-                }
-            } catch (error) {
-                console.error('二维码生成异常:', error);
-                qrElement.innerHTML = '<div style="color: #666; font-size: 10px; text-align: center; padding: 20px;">📱<br/>扫码查看</div>';
-            }
+            // 使用QR Server API生成二维码图片
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=64x64&data=${encodeURIComponent(detailUrl)}`;
+            
+            // 创建img元素显示二维码
+            const img = document.createElement('img');
+            img.src = qrApiUrl;
+            img.alt = `成果${achievement.id}二维码`;
+            img.style.width = '64px';
+            img.style.height = '64px';
+            img.style.display = 'block';
+            
+            // 添加加载错误处理
+            img.onerror = function() {
+                console.error('二维码API加载失败，尝试备用方案');
+                // 备用方案：使用Google Charts API
+                const googleQrUrl = `https://chart.googleapis.com/chart?chs=64x64&cht=qr&chl=${encodeURIComponent(detailUrl)}`;
+                const backupImg = document.createElement('img');
+                backupImg.src = googleQrUrl;
+                backupImg.alt = `成果${achievement.id}二维码`;
+                backupImg.style.width = '64px';
+                backupImg.style.height = '64px';
+                backupImg.style.display = 'block';
+                
+                backupImg.onerror = function() {
+                    // 如果两个API都失败，显示占位符
+                    qrElement.innerHTML = `
+                        <div style="
+                            width: 64px; 
+                            height: 64px; 
+                            background: #f0f0f0; 
+                            border: 1px solid #ddd; 
+                            display: flex; 
+                            align-items: center; 
+                            justify-content: center; 
+                            font-size: 10px; 
+                            text-align: center; 
+                            color: #666;
+                            cursor: pointer;
+                        " onclick="window.open('${detailUrl}', '_blank')">
+                            📱<br/>点击<br/>查看
+                        </div>
+                    `;
+                };
+                
+                qrElement.innerHTML = '';
+                qrElement.appendChild(backupImg);
+            };
+            
+            // 添加点击事件
+            img.onclick = function() {
+                window.open(detailUrl, '_blank');
+            };
+            img.style.cursor = 'pointer';
+            img.title = '点击或扫描查看详情';
+            
+            qrElement.appendChild(img);
         }
     });
 }
